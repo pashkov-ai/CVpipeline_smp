@@ -1,0 +1,135 @@
+[project]
+name = "cvpipeline-eda"
+version = "0.1.0"
+description = "EDA for fabric defect detection"
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+# ============================================================================
+# RUFF - Linting and Formatting
+# ============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = [".", "cvpipeline_smp", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade (enforce modern Python syntax)
+    "ANN",    # flake8-annotations (enforce type hints)
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "T10",    # flake8-debugger
+    "EM",     # flake8-errmsg
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "PIE",    # flake8-pie
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SIM",    # flake8-simplify
+    "PTH",    # flake8-use-pathlib
+    "PL",     # pylint
+    "RUF",    # ruff-specific rules
+]
+ignore = [
+    "ANN101",  # Missing type annotation for self in method
+    "ANN102",  # Missing type annotation for cls in classmethod
+    "D203",    # 1 blank line required before class docstring (conflicts with D211)
+    "D213",    # Multi-line docstring summary should start at second line (conflicts with D212)
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# ============================================================================
+# PYRIGHT - Static Type Checking
+# ============================================================================
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "strict"
+include = [".", "eda", "tests"]
+exclude = [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/build",
+    "**/dist",
+    "**/.venv",
+    "**/venv",
+]
+
+# Strict type checking options
+reportMissingTypeStubs = "warning"
+reportUnknownMemberType = "warning"
+reportUnknownArgumentType = "warning"
+reportUnknownVariableType = "warning"
+reportUnknownLambdaType = "warning"
+
+# ============================================================================
+# PYTEST - Testing Framework
+# ============================================================================
+#[tool.pytest.ini_options]
+#minversion = "7.0"
+#testpaths = ["tests"]
+#python_files = ["test_*.py", "*_test.py"]
+#python_classes = ["Test*"]
+#python_functions = ["test_*"]
+#addopts = [
+#    "-v",                    # verbose
+#    "--strict-markers",      # error on unknown markers
+#    "--strict-config",       # error on unknown config options
+#    "--cov=.",              # coverage for source code
+#    "--cov=eda",            # coverage for eda module
+#    "--cov-report=term-missing",  # show missing lines in terminal
+#    "--cov-report=html",     # generate HTML coverage report
+#    "--cov-report=xml",      # generate XML coverage report (for CI)
+#    "--cov-fail-under=80",   # fail if coverage below 80%
+#]
+
+# ============================================================================
+# COVERAGE - Test Coverage
+# ============================================================================
+#[tool.coverage.run]
+#source = [".", "eda"]
+#omit = [
+#    "*/tests/*",
+#    "*/__pycache__/*",
+#    "*/.venv/*",
+#    "*/venv/*",
+#    "setup.py",
+#]
+#branch = true
+#
+#[tool.coverage.report]
+#precision = 2
+#show_missing = true
+#skip_covered = false
+#exclude_lines = [
+#    "pragma: no cover",
+#    "def __repr__",
+#    "raise AssertionError",
+#    "raise NotImplementedError",
+#    "if __name__ == .__main__.:",
+#    "if TYPE_CHECKING:",
+#    "@abstractmethod",
+#]
+#
+#[tool.coverage.html]
+#directory = "htmlcov"

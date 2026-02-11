@@ -1,0 +1,78 @@
+# Pre-commit hooks for CVpipeline project
+# conda install pre-commitn
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+# Update: pre-commit autoupdate
+
+# Global settings
+default_language_version:
+  python: python3.13
+
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+  autofix_prs: true
+  autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
+  autoupdate_schedule: weekly
+
+repos:
+  # Ruff - Fast Python linter and formatter (replaces black, isort, flake8, etc.)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      # Linter
+      - id: ruff
+        name: ruff-linter
+        args: [--fix]
+        types_or: [python, pyi, jupyter]
+      # Formatter
+      - id: ruff-format
+        name: ruff-formatter
+        types_or: [python, pyi, jupyter]
+
+  # Pyright - Static type checker
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.390
+    hooks:
+      - id: pyright
+        name: pyright-type-check
+        additional_dependencies: []  # Add project dependencies here if needed
+
+  # Pytest - Run tests before commit
+#  - repo: local
+#    hooks:
+#      - id: pytest
+#        name: pytest-tests
+#        entry: pytest
+#        language: system
+#        pass_filenames: false
+#        always_run: true
+#        args: [
+#          "--tb=short",           # short traceback format
+#          "--quiet",              # less verbose for pre-commit
+#        ]
+
+  # Built-in hooks for general file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: trim-trailing-whitespace
+      - id: end-of-file-fixer
+        name: fix-end-of-file
+      - id: check-yaml
+        name: check-yaml-syntax
+      - id: check-toml
+        name: check-toml-syntax
+      - id: check-json
+        name: check-json-syntax
+      - id: check-added-large-files
+        name: check-large-files
+        args: [--maxkb=10000]
+      - id: check-merge-conflict
+        name: check-merge-conflicts
+      - id: check-case-conflict
+        name: check-case-conflicts
+      - id: mixed-line-ending
+        name: fix-mixed-line-endings
+        args: [--fix=lf]
