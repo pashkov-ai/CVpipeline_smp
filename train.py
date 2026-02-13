@@ -9,6 +9,22 @@ from cvpipeline_smp.config.training_config import TrainingConfig
 from cvpipeline_smp.data.datamodule import AITEXFabricDataModule
 from cvpipeline_smp.lightning_module import SMPLightningModule
 
+import os
+import random
+import numpy as np
+
+
+def set_random_seed(seed: int = 8888) -> None:
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    pl.seed_everything(seed, workers=True)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
 
 def training_pipeline():
     """Train the binary classification model for fabric defect detection.
@@ -17,6 +33,9 @@ def training_pipeline():
         Run this script from the command line:
         $ python train.py
     """
+
+    set_random_seed()
+
     # Load configuration
     config = TrainingConfig()
     torch.set_float32_matmul_precision('high')
@@ -60,7 +79,9 @@ def training_pipeline():
         # callbacks=[checkpoint_callback],
         logger=logger,
         log_every_n_steps=10,
+
         deterministic=True,
+        benchmark=False
     )
 
     # Train the model
