@@ -168,7 +168,6 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         batch_size: Batch size for dataloaders.
         num_workers: Number of workers for dataloaders.
         image_size: Tuple of (height, width) for resizing images.
-        seed: Random seed for train/val/test split.
 
     Example:
         >>> dm = AITEXFabricDataModule(data_dir="data/AITEX_Fabric_Image_Database")
@@ -186,7 +185,6 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         num_workers: int = 4,
         image_size: tuple[int, int] = (256, 256),
         model_config: dict = None,
-        seed: int = 42,
     ) -> None:
         """Initialize the data module."""
         super().__init__()
@@ -195,7 +193,6 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.image_size = image_size
-        self.seed = seed
 
         self.train_dataset: AITEXFabricDataset | None = None
         self.val_dataset: AITEXFabricDataset | None = None
