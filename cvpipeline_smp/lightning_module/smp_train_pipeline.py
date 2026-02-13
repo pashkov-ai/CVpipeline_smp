@@ -29,30 +29,31 @@ class SMPLightningModule(pl.LightningModule):
         torch.Size([2, 1, 256, 256])
     """
 
-    def __init__(self) -> None:
+    def __init__(self, smp_model_config: dict, mode:str = 'binary') -> None:
         """Initialize the segmentation model."""
         super().__init__()
         self.save_hyperparameters()
 
         self.model = smp.create_model(
-            'UnetPlusPlus',
-            encoder_name='efficientnet-b0',
-            encoder_weights="imagenet",
-            in_channels=3,
-            classes=1,
+            arch=smp_model_config['arch'],
+            encoder_name=smp_model_config['encoder_name'],
+            encoder_weights=smp_model_config['encoder_weights'],
+            in_channels=smp_model_config['in_channels'],
+            classes=smp_model_config['classes'],
             # activation="sigmoid",
         )
-        # preprocessing parameteres for image
-        params = smp.encoders.get_preprocessing_params('efficientnet-b0')
-        preprocess_input = smp.encoders.get_preprocessing_fn('efficientnet-b0', pretrained='imagenet')
-        self.register_buffer("std", torch.tensor(params["std"]).view(1, 3, 1, 1))
-        self.register_buffer("mean", torch.tensor(params["mean"]).view(1, 3, 1, 1))
 
         # for image segmentation dice loss could be the best first choice
-        self.loss_fn = smp.losses.DiceLoss(smp.losses.BINARY_MODE, from_logits=True)
-
-        self.loss_fn = smp.losses.DiceLoss(smp.losses.BINARY_MODE, from_logits=True)
-
+        if mode == 'binary':
+            self.loss_fn = smp.losses.DiceLoss(smp.losses.BINARY_MODE, from_logits=True)
+        elif mode == 'multiclass':
+            raise ValueError(f"Unsupported mode: {mode}")
+            self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTICLASS_MODE, from_logits=True)
+        elif mode == 'multilabel':
+            raise ValueError(f"Unsupported mode: {mode}")
+            self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTILABEL_MODE, from_logits=True)
+        else:
+            raise ValueError(f"Unsupported mode: {mode}")
 
         # initialize step metics
         self.training_step_outputs = []

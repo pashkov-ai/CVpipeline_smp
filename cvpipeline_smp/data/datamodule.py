@@ -10,6 +10,7 @@ import torch
 from albumentations.pytorch import ToTensorV2
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
+from segmentation_models_pytorch.encoders import get_preprocessing_params
 
 import os
 from pathlib import Path
@@ -184,6 +185,7 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         batch_size: int = 8,
         num_workers: int = 4,
         image_size: tuple[int, int] = (256, 256),
+        model_config: dict = None,
         seed: int = 42,
     ) -> None:
         """Initialize the data module."""
@@ -199,19 +201,21 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         self.val_dataset: AITEXFabricDataset | None = None
         self.test_dataset: AITEXFabricDataset | None = None
 
+        # preprocessing parameteres for image
+        params = get_preprocessing_params(encoder_name=model_config['encoder_name'], pretrained=model_config['encoder_weights'])
         # Define transforms
         # todo move transform defentions outside
         self.train_transform = A.Compose([
             A.Resize(height=image_size[0], width=image_size[1]),
             # A.HorizontalFlip(p=0.5),
             # A.RandomBrightnessContrast(p=0.2),
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),# todo use smp pre_processing
+            A.Normalize(mean=params['mean'], std=params['std']),
             ToTensorV2(),
         ])
 
         self.val_transform = A.Compose([
             A.Resize(height=image_size[0], width=image_size[1]),
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            A.Normalize(mean=params['mean'], std=params['std']),
             ToTensorV2(),
         ])
 
@@ -275,7 +279,9 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         defect_files = sorted([f for f in os.listdir(defect_dir) if f.endswith(".png")])
 
         for defect_file in defect_files:
-            if '0044_019_04' in defect_file or '0097_030_03' in defect_file or '0100_025_08' in defect_file:
+            if '0044_019_04' in defect_file or '0097_030_03' in defect_file :# 2 masks
+                continue
+            if '0100_025_08' in defect_file: # no mask
                 continue
 
             # Parse filename: nnnn_ddd_ff.png
@@ -317,6 +323,8 @@ class AITEXFabricDataModule(pl.LightningDataModule):
             Tuple of (image_paths, labels) where labels are 0 (no-defect) or 1 (defect).
         """
 
+
+        # todo infer / verify  mode (binary, multiclass, multilabel) here
         # convert raw dataset format to labeled dataset format
         dataset = self._load_dataset()
         labeled_dataset = {}

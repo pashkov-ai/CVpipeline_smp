@@ -1,8 +1,5 @@
 """Training script for binary classification model using PyTorch Lightning."""
-from typing import Any
-
-from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torch
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -13,29 +10,7 @@ from cvpipeline_smp.data.datamodule import AITEXFabricDataModule
 from cvpipeline_smp.lightning_module import SMPLightningModule
 
 
-def configure_optimizers(self) -> dict[str, Any]:
-    """Configure optimizer and learning rate scheduler.
-
-    Returns:
-        Dictionary containing optimizer and scheduler configuration.
-    """
-    optimizer = Adam(self.parameters(), lr=self.lr)
-    scheduler = ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        factor=0.5,
-        patience=3,
-    )
-
-    return {
-        "optimizer": optimizer,
-        "lr_scheduler": {
-            "scheduler": scheduler,
-            "monitor": "val_loss",
-        },
-    }
-
-def main() -> None:
+def training_pipeline():
     """Train the binary classification model for fabric defect detection.
 
     Example:
@@ -44,16 +19,25 @@ def main() -> None:
     """
     # Load configuration
     config = TrainingConfig()
+    torch.set_float32_matmul_precision('high')
+    smp_model_config = {
+        'arch': 'UnetPlusPlus',
+        'encoder_name': 'efficientnet-b0',
+        'encoder_weights': "imagenet",
+        'in_channels': 3,
+        'classes': 1
+    }
 
     # Initialize data module
     datamodule = AITEXFabricDataModule(
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         image_size=config.image_size,
+        model_config=smp_model_config,
     )
 
     # Initialize model
-    lightning_model = SMPLightningModule()
+    lightning_model = SMPLightningModule(smp_model_config, mode='binary')
 
     # Setup callbacks
     checkpoint_callback = ModelCheckpoint(
@@ -84,6 +68,9 @@ def main() -> None:
 
     # Test the model
     trainer.test(lightning_model, datamodule=datamodule)
+
+def main() -> None:
+    training_pipeline()
 
 
 if __name__ == "__main__":
