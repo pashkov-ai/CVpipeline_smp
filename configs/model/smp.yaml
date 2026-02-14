@@ -1,0 +1,7 @@
+arch: UnetPlusPlus
+encoder_name: efficientnet-b0
+encoder_weights: imagenet
+
+# todo dataset properties
+in_channels: 3
+classes: 1

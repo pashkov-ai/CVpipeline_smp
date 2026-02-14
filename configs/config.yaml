@@ -1,0 +1,14 @@
+defaults:
+  - _self_
+#  - callbacks: callbacks
+  - datamodule: datamodule
+  - model: smp
+  - trainer: test
+
+general:
+  random_seed: 8888
+  mode: binary # todo dataset property
+
+hydra:
+  run:
+    dir: training/${now:%Y-%m-%d_%H-%M-%S}

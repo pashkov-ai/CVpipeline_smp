@@ -1,5 +1,7 @@
 """Training script for binary classification model using PyTorch Lightning."""
 import torch
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -14,6 +16,9 @@ import random
 import numpy as np
 import shutil
 from pathlib import Path
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 
 def set_random_seed(seed: int = 8888) -> None:
@@ -28,7 +33,7 @@ def set_random_seed(seed: int = 8888) -> None:
     torch.backends.cudnn.deterministic = True
 
 
-def training_pipeline():
+def training_pipeline(cfg: DictConfig):
     """Train the binary classification model for fabric defect detection.
 
     Example:
@@ -36,33 +41,24 @@ def training_pipeline():
         $ python train.py
     """
 
-    set_random_seed()
+    set_random_seed(cfg.general.random_seed)
 
     # Load configuration
     config = TrainingConfig()
     torch.set_float32_matmul_precision('high')
     smp_model_config = {
-        'arch': 'UnetPlusPlus',
-        'encoder_name': 'efficientnet-b0',
-        'encoder_weights': "imagenet",
-        'in_channels': 3,
-        'classes': 1
+
     }
 
     # Initialize data module
-    datamodule = AITEXFabricDataModule(
-        batch_size=config.batch_size,
-        num_workers=config.num_workers,
-        image_size=config.image_size,
-        model_config=smp_model_config,
-    )
+    datamodule = AITEXFabricDataModule(cfg=cfg)
 
     # Initialize model
-    lightning_model = SMPLightningModule(smp_model_config, mode='binary')
+    lightning_model = SMPLightningModule(cfg=cfg)
 
 
     # Setup checkpoints callback
-    checkpoint_dir = Path("training/checkpoints")
+    checkpoint_dir = Path("training/")
     if checkpoint_dir.exists():
         shutil.rmtree(checkpoint_dir)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -81,20 +77,21 @@ def training_pipeline():
         tracking_uri="http://127.0.0.1:5000/",
         log_model=True,
     )
+    OmegaConf.save(cfg, "training/config.yaml")
+    logger.experiment.log_artifact(
+        run_id=logger.run_id,
+        local_path="training/config.yaml"
+    )
+
+    # todo: log augs to mlflow
 
     # Initialize trainer
     trainer = pl.Trainer(
-        max_epochs=config.max_epochs,
-        accelerator="auto",
-        devices=1,
         callbacks=[checkpoint_callback],
         logger=logger,
-        log_every_n_steps=10,
-
-        deterministic=True,
-        benchmark=False
+        **cfg.trainer
     )
-    trainer.logger.log_hyperparams(smp_model_config)
+    trainer.logger.log_hyperparams(OmegaConf.to_object(cfg))
 
     # Train the model
     trainer.fit(lightning_model, datamodule=datamodule)
@@ -103,9 +100,10 @@ def training_pipeline():
     trainer.test(lightning_model, datamodule=datamodule)
 
 
-def main() -> None:
-    training_pipeline()
+@hydra.main(config_path='configs', config_name='config', version_base='1.3')
+def hydra_run_train(cfg: DictConfig) -> None:
+    training_pipeline(cfg)
 
 
 if __name__ == "__main__":
-    main()
+    hydra_run_train()

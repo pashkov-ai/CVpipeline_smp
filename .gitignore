@@ -114,3 +114,5 @@ cython_debug/
 *.iws
 *.ipr
 out/
+/training/checkpoints/epoch=epoch=0-valid_loss=valid_loss=0.9993.ckpt
+/training/checkpoints/last.ckpt

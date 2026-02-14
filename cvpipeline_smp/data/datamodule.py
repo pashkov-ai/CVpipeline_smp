@@ -19,6 +19,8 @@ from typing import Any
 import cv2
 import numpy as np
 
+from omegaconf import DictConfig
+
 
 def split_by_proportions(
         data: list,
@@ -181,29 +183,24 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         self,
         data_dir: str | Path = "data/AITEX_Fabric_Image_Database",
         labels_mapping: dict[str, int] = None,
-        batch_size: int = 8,
-        num_workers: int = 4,
-        image_size: tuple[int, int] = (256, 256),
-        model_config: dict = None,
+        cfg: DictConfig = None,
     ) -> None:
         """Initialize the data module."""
         super().__init__()
         self.data_dir = data_dir
         self.labels_mapping = labels_mapping
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-        self.image_size = image_size
+        self.cfg = cfg
 
         self.train_dataset: AITEXFabricDataset | None = None
         self.val_dataset: AITEXFabricDataset | None = None
         self.test_dataset: AITEXFabricDataset | None = None
 
         # preprocessing parameteres for image
-        params = get_preprocessing_params(encoder_name=model_config['encoder_name'], pretrained=model_config['encoder_weights'])
+        params = get_preprocessing_params(encoder_name=cfg.model.encoder_name, pretrained=cfg.model.encoder_weights)
         # Define transforms
         # todo move transform defentions outside
         self.train_transform = A.Compose([
-            A.Resize(height=image_size[0], width=image_size[1]),
+            A.Resize(height=self.cfg.datamodule.image_size.height, width=self.cfg.datamodule.image_size.width),
             # A.HorizontalFlip(p=0.5),
             # A.RandomBrightnessContrast(p=0.2),
             A.Normalize(mean=params['mean'], std=params['std']),
@@ -211,7 +208,7 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         ])
 
         self.val_transform = A.Compose([
-            A.Resize(height=image_size[0], width=image_size[1]),
+            A.Resize(height=self.cfg.datamodule.image_size.height, width=self.cfg.datamodule.image_size.width),
             A.Normalize(mean=params['mean'], std=params['std']),
             ToTensorV2(),
         ])
@@ -380,10 +377,7 @@ class AITEXFabricDataModule(pl.LightningDataModule):
 
         return DataLoader(
             self.train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=self.num_workers,
-            pin_memory=True,
+            **self.cfg.datamodule.dataloaders.train
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -395,10 +389,7 @@ class AITEXFabricDataModule(pl.LightningDataModule):
 
         return DataLoader(
             self.val_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            pin_memory=True,
+            **self.cfg.datamodule.dataloaders.valid
         )
 
     def test_dataloader(self) -> DataLoader:
@@ -410,8 +401,5 @@ class AITEXFabricDataModule(pl.LightningDataModule):
 
         return DataLoader(
             self.test_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            pin_memory=True,
+            **self.cfg.datamodule.dataloaders.test
         )

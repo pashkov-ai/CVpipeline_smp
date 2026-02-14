@@ -1,0 +1,21 @@
+image_size:
+  height: 256
+  width: 4096
+
+dataloaders:
+  train:
+    num_workers: 15
+    batch_size: 4
+    shuffle: True
+    pin_memory: True
+  valid:
+    num_workers: 15
+    batch_size: 4
+    shuffle: False
+    pin_memory: True
+  test:
+    num_workers: 15
+    batch_size: 4
+    shuffle: False
+    pin_memory: True
+

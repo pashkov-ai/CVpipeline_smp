@@ -6,6 +6,7 @@ import segmentation_models_pytorch as smp
 import torch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingLR
+from omegaconf import DictConfig
 
 
 class SMPLightningModule(pl.LightningModule):
@@ -29,31 +30,27 @@ class SMPLightningModule(pl.LightningModule):
         torch.Size([2, 1, 256, 256])
     """
 
-    def __init__(self, smp_model_config: dict, mode:str = 'binary') -> None:
+    def __init__(self, cfg: DictConfig) -> None:
         """Initialize the segmentation model."""
         super().__init__()
         self.save_hyperparameters()
 
         self.model = smp.create_model(
-            arch=smp_model_config['arch'],
-            encoder_name=smp_model_config['encoder_name'],
-            encoder_weights=smp_model_config['encoder_weights'],
-            in_channels=smp_model_config['in_channels'],
-            classes=smp_model_config['classes'],
+            **cfg.model
             # activation="sigmoid",
         )
 
         # for image segmentation dice loss could be the best first choice
-        if mode == 'binary':
+        if cfg.general.mode == 'binary':
             self.loss_fn = smp.losses.DiceLoss(smp.losses.BINARY_MODE, from_logits=True)
-        elif mode == 'multiclass':
-            raise ValueError(f"Unsupported mode: {mode}")
+        elif cfg.general.mode == 'multiclass':
+            raise ValueError(f"Unsupported mode: {cfg.general.mode}")
             self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTICLASS_MODE, from_logits=True)
-        elif mode == 'multilabel':
-            raise ValueError(f"Unsupported mode: {mode}")
+        elif cfg.general.mode == 'multilabel':
+            raise ValueError(f"Unsupported mode: {cfg.general.mode}")
             self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTILABEL_MODE, from_logits=True)
         else:
-            raise ValueError(f"Unsupported mode: {mode}")
+            raise ValueError(f"Unsupported mode: {cfg.general.mode}")
 
         # initialize step metics
         self.training_step_outputs = []
