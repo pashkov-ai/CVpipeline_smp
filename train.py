@@ -3,7 +3,7 @@ import torch
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import CSVLogger
+from pytorch_lightning.loggers import MLFlowLogger
 
 from cvpipeline_smp.config.training_config import TrainingConfig
 from cvpipeline_smp.data.datamodule import AITEXFabricDataModule
@@ -12,6 +12,8 @@ from cvpipeline_smp.lightning_module import SMPLightningModule
 import os
 import random
 import numpy as np
+import shutil
+from pathlib import Path
 
 
 def set_random_seed(seed: int = 8888) -> None:
@@ -58,37 +60,48 @@ def training_pipeline():
     # Initialize model
     lightning_model = SMPLightningModule(smp_model_config, mode='binary')
 
-    # Setup callbacks
+
+    # Setup checkpoints callback
+    checkpoint_dir = Path("training/checkpoints")
+    if checkpoint_dir.exists():
+        shutil.rmtree(checkpoint_dir)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints",
-        filename="classification-{epoch:02d}-{val_loss:.4f}",
-        monitor="val_loss",
+        dirpath="training/checkpoints",
+        filename="epoch={epoch}-valid_loss={valid_loss:.4f}",
+        monitor="valid_loss",
         mode="min",
         save_top_k=3,
         save_last=True,
     )
 
     # Setup logger
-    logger = CSVLogger("logs", name="classification_training")
+    logger = MLFlowLogger(
+        experiment_name="localtest",
+        tracking_uri="http://127.0.0.1:5000/",
+        log_model=True,
+    )
 
     # Initialize trainer
     trainer = pl.Trainer(
         max_epochs=config.max_epochs,
         accelerator="auto",
         devices=1,
-        # callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback],
         logger=logger,
         log_every_n_steps=10,
 
         deterministic=True,
         benchmark=False
     )
+    trainer.logger.log_hyperparams(smp_model_config)
 
     # Train the model
     trainer.fit(lightning_model, datamodule=datamodule)
 
     # Test the model
     trainer.test(lightning_model, datamodule=datamodule)
+
 
 def main() -> None:
     training_pipeline()
