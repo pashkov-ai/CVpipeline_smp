@@ -15,6 +15,7 @@ from segmentation_models_pytorch.encoders import get_preprocessing_params
 import os
 from pathlib import Path
 from typing import Any
+import logging
 
 
 from omegaconf import DictConfig
@@ -337,6 +338,7 @@ class AITEXFabricDataModule(pl.LightningDataModule):
 
         n_labels = len(labeled_dataset.keys())
 
+        # todo: splits are imbalanced for binary multi error code setup
         dataset_splits = [[], [], []]
         for label, label_list in labeled_dataset.items():
             splits = split_by_proportions(label_list, (75, 15, 10))
@@ -344,7 +346,15 @@ class AITEXFabricDataModule(pl.LightningDataModule):
             dataset_splits[1].extend(splits[1])
             dataset_splits[2].extend(splits[2])
 
-        print(n_labels, len(labeled_dataset[1]), len(dataset_splits[0]), len(dataset_splits[1]), len(dataset_splits[2]))
+        logging.info(f"Number of labels: {n_labels}")
+        for label in labeled_dataset.keys():
+            logging.info(f"Number of samples for label {label}: {len(labeled_dataset[label])}")
+        logging.info(f"Number of train samples: {len(dataset_splits[0])}")
+        logging.info(f"Number of validation samples: {len(dataset_splits[1])}")
+        logging.info(f"Number of test samples: {len(dataset_splits[2])}")
+        for i in range(3):
+            fnames = '\n'.join(Path(image_path).name for _, image_path, _ in dataset_splits[i])
+            logging.info(f"Images in split {i}:\n{fnames}")
         self.train_dataset = AITEXFabricDataset(
             images=dataset_splits[0],
             n_labels=n_labels,
