@@ -1,0 +1,8 @@
+_target_: segmentation_models_pytorch.losses.TverskyLoss
+#mode: ${general.mode}
+log_loss: False
+from_logits: True
+smooth: 0.0
+alpha: 0.3 # 0.5 # Weight constant that penalize model for FPs (False Positives)
+beta: 0.7 # 0.5 # Weight constant that penalize model for FNs (False Negatives)
+gamma: 1.0 # Constant that squares the error function.

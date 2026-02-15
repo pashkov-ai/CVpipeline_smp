@@ -1,0 +1,9 @@
+_target_: torch.optim.SGD
+lr: ${general.learning_rate}
+momentum: 0
+dampening: 0
+weight_decay: 0
+nesterov: False
+maximize: False
+differentiable: False
+#foreach: None

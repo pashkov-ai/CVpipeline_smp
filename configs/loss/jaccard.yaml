@@ -1,0 +1,5 @@
+_target_: segmentation_models_pytorch.losses.JaccardLoss
+#mode: ${general.mode}
+log_loss: False
+from_logits: True
+smooth: 0.0

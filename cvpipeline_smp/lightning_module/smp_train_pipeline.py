@@ -1,11 +1,8 @@
-from typing import Any
 
-import numpy as np
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
-from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingLR
+from hydra.utils import instantiate as hydra_instantiate
 from omegaconf import DictConfig
 
 
@@ -33,24 +30,23 @@ class SMPLightningModule(pl.LightningModule):
     def __init__(self, cfg: DictConfig) -> None:
         """Initialize the segmentation model."""
         super().__init__()
-        self.save_hyperparameters()
-
+        self.cfg = cfg
         self.model = smp.create_model(
             **cfg.model
             # activation="sigmoid",
         )
 
         # for image segmentation dice loss could be the best first choice
-        if cfg.general.mode == 'binary':
-            self.loss_fn = smp.losses.DiceLoss(smp.losses.BINARY_MODE, from_logits=True)
-        elif cfg.general.mode == 'multiclass':
-            raise ValueError(f"Unsupported mode: {cfg.general.mode}")
+        if cfg.labels.mode == 'binary':
+            self.loss_fn = hydra_instantiate(cfg.loss, mode = smp.losses.BINARY_MODE)
+        elif cfg.labels.mode == 'multiclass':
+            raise ValueError(f"Unsupported mode: {cfg.labels.mode}")
             self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTICLASS_MODE, from_logits=True)
-        elif cfg.general.mode == 'multilabel':
-            raise ValueError(f"Unsupported mode: {cfg.general.mode}")
+        elif cfg.labels.mode == 'multilabel':
+            raise ValueError(f"Unsupported mode: {cfg.labels.mode}")
             self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTILABEL_MODE, from_logits=True)
         else:
-            raise ValueError(f"Unsupported mode: {cfg.general.mode}")
+            raise ValueError(f"Unsupported mode: {cfg.labels.mode}")
 
         # initialize step metics
         self.training_step_outputs = []
@@ -192,18 +188,15 @@ class SMPLightningModule(pl.LightningModule):
 
 
     def configure_optimizers(self):        # todo hydra config
-        optimizer = Adam(self.parameters(), lr=1e-4)
-        scheduler = ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=0.5,
-            patience=3,
-        )
+        optimizer = hydra_instantiate(self.cfg.optimizer, params=self.parameters())
+        scheduler = hydra_instantiate(self.cfg.scheduler, optimizer=optimizer)
         ret = {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "valid_loss",
+                "interval": self.cfg.general.scheduler_interval,
+                "frequency": self.cfg.general.scheduler_frequency,
+                "monitor": self.cfg.general.scheduler_monitor,
             },
         }
         return ret

@@ -1,13 +1,12 @@
 """Training script for binary classification model using PyTorch Lightning."""
 import torch
 import hydra
+import json
 from omegaconf import DictConfig, OmegaConf
 
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import MLFlowLogger
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from cvpipeline_smp.config.training_config import TrainingConfig
 from cvpipeline_smp.data.datamodule import AITEXFabricDataModule
 from cvpipeline_smp.lightning_module import SMPLightningModule
 
@@ -17,6 +16,7 @@ import numpy as np
 import shutil
 from pathlib import Path
 import logging
+from hydra.core.hydra_config import HydraConfig
 
 logging.basicConfig(level=logging.INFO)
 
@@ -43,55 +43,45 @@ def training_pipeline(cfg: DictConfig):
 
     set_random_seed(cfg.general.random_seed)
 
-    # Load configuration
-    config = TrainingConfig()
     torch.set_float32_matmul_precision('high')
-    smp_model_config = {
 
-    }
+    # Setup logger
+    logger = hydra.utils.instantiate(cfg.logger)
+
+    run_dir = Path(HydraConfig.get().runtime.output_dir)
+
+    config_artifact_path = run_dir / "config.yaml"
+    OmegaConf.save(cfg, config_artifact_path)
+    logger.experiment.log_artifact(
+        run_id=logger.run_id,
+        local_path=config_artifact_path
+    )
+
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=run_dir / "checkpoints",
+        **cfg.callbacks.model_checkpoint
+    )
+    early_stopping_callback = EarlyStopping(**cfg.callbacks.early_stopping)
+
+    other_callbacks = [hydra.utils.instantiate(callback) for callback in cfg.callbacks.other_callbacks]
+
+    # todo: log augs to mlflow
+
+    # Initialize trainer
+    trainer = pl.Trainer(
+        callbacks=[checkpoint_callback, early_stopping_callback] + other_callbacks,
+        logger=logger,
+        **cfg.trainer
+    )
+    trainer.logger.log_hyperparams(OmegaConf.to_object(cfg))
+    logging.info("Training started with config:\n%s", json.dumps(OmegaConf.to_object(cfg), indent=2))
+
 
     # Initialize data module
     datamodule = AITEXFabricDataModule(cfg=cfg)
 
     # Initialize model
     lightning_model = SMPLightningModule(cfg=cfg)
-
-
-    # Setup checkpoints callback
-    checkpoint_dir = Path("training/")
-    if checkpoint_dir.exists():
-        shutil.rmtree(checkpoint_dir)
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="training/checkpoints",
-        filename="epoch={epoch}-valid_loss={valid_loss:.4f}",
-        monitor="valid_loss",
-        mode="min",
-        save_top_k=3,
-        save_last=True,
-    )
-
-    # Setup logger
-    logger = MLFlowLogger(
-        experiment_name="localtest",
-        tracking_uri="http://127.0.0.1:5000/",
-        log_model=True,
-    )
-    OmegaConf.save(cfg, "training/config.yaml")
-    logger.experiment.log_artifact(
-        run_id=logger.run_id,
-        local_path="training/config.yaml"
-    )
-
-    # todo: log augs to mlflow
-
-    # Initialize trainer
-    trainer = pl.Trainer(
-        callbacks=[checkpoint_callback],
-        logger=logger,
-        **cfg.trainer
-    )
-    trainer.logger.log_hyperparams(OmegaConf.to_object(cfg))
 
     # Train the model
     trainer.fit(lightning_model, datamodule=datamodule)

@@ -3,19 +3,23 @@ image_size:
   width: 4096
 
 dataloaders:
+  num_workers: 15
+
   train:
-    num_workers: 15
-    batch_size: 4
+    batch_size: ${general.batch_size}
+    num_workers: ${datamodule.dataloaders.num_workers}
     shuffle: True
     pin_memory: True
+
   valid:
-    num_workers: 15
-    batch_size: 4
+    batch_size: ${general.batch_size}
+    num_workers: ${datamodule.dataloaders.num_workers}
     shuffle: False
     pin_memory: True
+
   test:
-    num_workers: 15
-    batch_size: 4
+    batch_size: ${general.batch_size}
+    num_workers: ${datamodule.dataloaders.num_workers}
     shuffle: False
     pin_memory: True
 

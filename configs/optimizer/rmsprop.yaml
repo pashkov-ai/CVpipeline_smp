@@ -1,0 +1,11 @@
+_target_: torch.optim.RMSprop
+lr: ${general.learning_rate}
+alpha: 0.99
+eps: 1e-08
+weight_decay: 0
+momentum: 0
+centered: False
+capturable: False
+maximize: False
+differentiable: False
+#foreach: None
