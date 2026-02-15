@@ -104,16 +104,18 @@ class AITEXFabricDataset(Dataset):
         self,
         images: list[tuple[int, Path, Path | None]], # (label, image_path, mask_path)
         n_labels: int,
+        crops_per_image: int,
         transform: A.Compose | None = None,
     ) -> None:
         """Initialize the AITEX fabric dataset."""
         self.images = images
         self.n_labels = n_labels
+        self.crops_per_image = crops_per_image
         self.transform = transform
 
     def __len__(self) -> int:
         """Return the number of samples in the dataset."""
-        return len(self.images)
+        return len(self.images) * self.crops_per_image
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get a single sample from the dataset.
@@ -126,7 +128,7 @@ class AITEXFabricDataset(Dataset):
                 - "image": RGB image tensor of shape (3, H, W)
                 - "label": Binary label tensor (0 or 1)
         """
-        label, image_path, mask_path = self.images[idx]
+        label, image_path, mask_path = self.images[idx % len(self.images)]
 
         # label = torch.tensor(label, dtype=torch.long)
 
@@ -346,16 +348,19 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         self.train_dataset = AITEXFabricDataset(
             images=dataset_splits[0],
             n_labels=n_labels,
+            crops_per_image=self.cfg.general.crops_per_image,
             transform=self.train_transform,
         )
         self.val_dataset = AITEXFabricDataset(
             images=dataset_splits[1],
             n_labels=n_labels,
+            crops_per_image=self.cfg.general.crops_per_image,
             transform=self.val_transform,
         )
         self.test_dataset = AITEXFabricDataset(
             images=dataset_splits[2],
             n_labels=n_labels,
+            crops_per_image=self.cfg.general.crops_per_image,
             transform=self.val_transform,
         )
 
