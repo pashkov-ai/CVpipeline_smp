@@ -151,12 +151,13 @@ class SMPLightningModule(pl.LightningModule):
             f"{stage}_dataset_iou": dataset_iou,
         }
 
-        self.log_dict(metrics, prog_bar=True)
+        self.log_dict(metrics, on_step=False, on_epoch=True, prog_bar=True)
 
     def training_step(self, batch, batch_idx):
         train_loss_info = self.shared_step(batch, "train")
         # append the metics of each step to the
         self.training_step_outputs.append(train_loss_info)
+        self.log('train_loss', train_loss_info['loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return train_loss_info
 
     def on_train_epoch_end(self):
