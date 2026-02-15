@@ -71,7 +71,7 @@ def training_pipeline(cfg: DictConfig):
     trainer = pl.Trainer(
         callbacks=[checkpoint_callback, early_stopping_callback] + other_callbacks,
         logger=logger,
-        **cfg.trainer
+        **cfg.trainer.params
     )
     trainer.logger.log_hyperparams(OmegaConf.to_object(cfg))
     logging.info("Training started with config:\n%s", json.dumps(OmegaConf.to_object(cfg), indent=2))

@@ -1,0 +1,6 @@
+name: ${labels.mode}_fuzzy_ball
+
+mode: binary
+
+mapping:
+  '019': 1

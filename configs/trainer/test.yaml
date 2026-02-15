@@ -1,10 +1,13 @@
-max_epochs: 1
-accumulate_grad_batches: 1
-log_every_n_steps: 10
-num_sanity_val_steps: 1
-devices: 1
-accelerator: auto
-num_nodes: 1
-deterministic: True
-benchmark: False
-profiler: False
+name: _test
+
+params:
+  max_epochs: 1
+  accumulate_grad_batches: 1
+  log_every_n_steps: 10
+  num_sanity_val_steps: 1
+  devices: 1
+  accelerator: auto
+  num_nodes: 1
+  deterministic: True
+  benchmark: False
+  profiler: False
