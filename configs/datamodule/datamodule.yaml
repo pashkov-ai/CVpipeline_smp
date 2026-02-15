@@ -4,22 +4,23 @@ image_size:
 
 dataloaders:
   num_workers: 15
+  pin_memory: False
 
   train:
     batch_size: ${general.batch_size}
     num_workers: ${datamodule.dataloaders.num_workers}
     shuffle: True
-    pin_memory: True
+    pin_memory: ${datamodule.dataloaders.pin_memory}
 
   valid:
     batch_size: ${general.batch_size}
     num_workers: ${datamodule.dataloaders.num_workers}
     shuffle: False
-    pin_memory: True
+    pin_memory: ${datamodule.dataloaders.pin_memory}
 
   test:
     batch_size: ${general.batch_size}
     num_workers: ${datamodule.dataloaders.num_workers}
     shuffle: False
-    pin_memory: True
+    pin_memory: ${datamodule.dataloaders.pin_memory}
 
