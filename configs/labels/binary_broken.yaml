@@ -1,0 +1,9 @@
+name: ${labels.mode}_defect
+
+mode: binary
+classes: 1
+
+mapping:
+  '002': 1
+  '006': 1
+  '010': 1
