@@ -1,0 +1,3 @@
+arch: UnetPlusPlus
+encoder_name: efficientnet-b3
+encoder_weights: imagenet

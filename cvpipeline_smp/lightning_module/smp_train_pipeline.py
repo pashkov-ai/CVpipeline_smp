@@ -32,8 +32,10 @@ class SMPLightningModule(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.model = smp.create_model(
-            **cfg.model
+            in_channels=3,
+            classes=cfg.labels.classes,
             # activation="sigmoid",
+            **cfg.model
         )
 
         # for image segmentation dice loss could be the best first choice

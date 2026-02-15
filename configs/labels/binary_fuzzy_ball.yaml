@@ -1,6 +1,7 @@
 name: ${labels.mode}_fuzzy_ball
 
 mode: binary
+classes: 1
 
 mapping:
   '019': 1

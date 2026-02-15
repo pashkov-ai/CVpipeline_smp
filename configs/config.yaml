@@ -1,18 +1,18 @@
 defaults:
   - _self_
-  - labels: binary_defect
+  - labels: binary_fuzzy_ball
   - datamodule: datamodule
-  - model: smp
-  - loss: tversky
+  - model: smp_unet_effnet
+  - loss: dice
   - optimizer: adamw
-  - scheduler: cosineannealing
-  - trainer: default
+  - scheduler: plateau
+  - trainer: test
   - callbacks: callbacks
   - logger: mlflow_local
 
 general:
   learning_rate: 1e-4
-  batch_size: 2
+  batch_size: 3
   scheduler_interval: epoch
   scheduler_monitor: valid_loss
   metric_mode: min
