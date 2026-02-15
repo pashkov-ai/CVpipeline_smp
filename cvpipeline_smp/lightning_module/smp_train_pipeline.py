@@ -5,6 +5,9 @@ import torch
 from hydra.utils import instantiate as hydra_instantiate
 from omegaconf import DictConfig
 
+import matplotlib.pyplot as plt
+import matplotlib.figure
+
 
 class SMPLightningModule(pl.LightningModule):
     """PyTorch Lightning module for binary segmentation.
@@ -54,6 +57,11 @@ class SMPLightningModule(pl.LightningModule):
         self.training_step_outputs = []
         self.validation_step_outputs = []
         self.test_step_outputs = []
+
+        # visualization samples storage
+        self.train_vis_samples = []
+        self.valid_vis_samples = []
+        self.max_vis_samples = 4  # Number of samples to visualize per epoch
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the model.
@@ -127,6 +135,76 @@ class SMPLightningModule(pl.LightningModule):
             }
         return ret
 
+    def visualize_predictions(
+        self,
+        images: torch.Tensor,
+        masks_true: torch.Tensor,
+        masks_pred: torch.Tensor,
+        max_samples: int = 4,
+    ):
+        """Create visualization of predictions.
+
+        Args:
+            images: Batch of input images of shape (B, C, H, W).
+            masks_true: Batch of ground truth masks of shape (B, 1, H, W).
+            masks_pred: Batch of predicted masks (probabilities) of shape (B, 1, H, W).
+            max_samples: Maximum number of samples to visualize.
+
+        Returns:
+            Matplotlib figure containing the visualizations or None if matplotlib not available.
+
+        Example:
+            >>> fig = self.visualize_predictions(images, masks_true, masks_pred, 4)
+            >>> self.logger.experiment.log_figure(fig, 'valid/predictions.png')
+        """
+        num_samples = min(max_samples, images.shape[0])
+
+        # Move tensors to CPU and convert to numpy
+        images = images[:num_samples].detach().cpu()
+        masks_true = masks_true[:num_samples].detach().cpu()
+        masks_pred = masks_pred[:num_samples].detach().cpu()
+
+        # Create figure with subplots: each row shows [image, ground truth, prediction]
+        fig, axes = plt.subplots(num_samples, 3, figsize=(12, 4 * num_samples))
+
+        # Handle single sample case
+        if num_samples == 1:
+            axes = axes.reshape(1, -1)
+
+        for idx in range(num_samples):
+            # Get image (C, H, W) and denormalize if needed
+            img = images[idx]
+
+            # Convert from (C, H, W) to (H, W, C) for plotting
+            if img.shape[0] == 3:  # RGB image
+                img_np = img.permute(1, 2, 0).numpy()
+                # Clip to [0, 1] range for visualization
+                img_np = (img_np - img_np.min()) / (img_np.max() - img_np.min() + 1e-8)
+            else:
+                img_np = img.squeeze().numpy()
+
+            # Get masks (1, H, W) -> (H, W)
+            mask_true_np = masks_true[idx].squeeze().numpy()
+            mask_pred_np = masks_pred[idx].squeeze().numpy()
+
+            # Plot original image
+            axes[idx, 0].imshow(img_np)
+            axes[idx, 0].set_title(f"Input Image {idx + 1}")
+            axes[idx, 0].axis("off")
+
+            # Plot ground truth mask
+            axes[idx, 1].imshow(mask_true_np, cmap="gray", vmin=0, vmax=1)
+            axes[idx, 1].set_title("Ground Truth")
+            axes[idx, 1].axis("off")
+
+            # Plot predicted mask
+            axes[idx, 2].imshow(mask_pred_np, cmap="gray", vmin=0, vmax=1)
+            axes[idx, 2].set_title("Prediction")
+            axes[idx, 2].axis("off")
+
+        plt.tight_layout()
+        return fig
+
     def shared_epoch_end(self, outputs, stage):
         # aggregate step metics
         tp = torch.cat([x["tp"] for x in outputs])
@@ -158,10 +236,47 @@ class SMPLightningModule(pl.LightningModule):
         # append the metics of each step to the
         self.training_step_outputs.append(train_loss_info)
         self.log('train_loss', train_loss_info['loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
+        # Store samples for visualization (only first batch)
+        if batch_idx == 0 and len(self.train_vis_samples) == 0:
+            image = batch['image']
+            mask = batch['mask']
+            logits_mask = self.forward(image)
+            prob_mask = logits_mask.sigmoid()
+
+            self.train_vis_samples.append({
+                'images': image.detach(),
+                'masks_true': mask.detach(),
+                'masks_pred': prob_mask.detach(),
+            })
+
         return train_loss_info
 
     def on_train_epoch_end(self):
         self.shared_epoch_end(self.training_step_outputs, "train")
+
+        # Log visualizations if samples were collected
+        if len(self.train_vis_samples) > 0 and self.logger is not None:
+            sample = self.train_vis_samples[0]
+            fig = self.visualize_predictions(
+                images=sample['images'],
+                masks_true=sample['masks_true'],
+                masks_pred=sample['masks_pred'],
+                max_samples=self.max_vis_samples,
+            )
+
+            # Log figure to MLFlow
+            if fig is not None:
+                self.logger.experiment.log_figure(
+                    run_id=self.logger.run_id,
+                    figure=fig,
+                    artifact_file=f"train/predictions_epoch_{self.current_epoch}.png"
+                )
+                plt.close(fig)
+
+            # Clear samples for next epoch
+            self.train_vis_samples.clear()
+
         # empty set output list
         self.training_step_outputs.clear()
         return
@@ -170,10 +285,47 @@ class SMPLightningModule(pl.LightningModule):
         valid_loss_info = self.shared_step(batch, "valid")
         self.validation_step_outputs.append(valid_loss_info)
         self.log('valid_loss', valid_loss_info['valid_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
+        # Store samples for visualization (only first batch)
+        if batch_idx == 0 and len(self.valid_vis_samples) == 0:
+            image = batch['image']
+            mask = batch['mask']
+            logits_mask = self.forward(image)
+            prob_mask = logits_mask.sigmoid()
+
+            self.valid_vis_samples.append({
+                'images': image.detach(),
+                'masks_true': mask.detach(),
+                'masks_pred': prob_mask.detach(),
+            })
+
         return valid_loss_info
 
     def on_validation_epoch_end(self):
         self.shared_epoch_end(self.validation_step_outputs, "valid")
+
+        # Log visualizations if samples were collected
+        if len(self.valid_vis_samples) > 0 and self.logger is not None:
+            sample = self.valid_vis_samples[0]
+            fig = self.visualize_predictions(
+                images=sample['images'],
+                masks_true=sample['masks_true'],
+                masks_pred=sample['masks_pred'],
+                max_samples=self.max_vis_samples,
+            )
+
+            # Log figure to MLFlow
+            if fig is not None:
+                self.logger.experiment.log_figure(
+                    run_id=self.logger.run_id,
+                    figure=fig,
+                    artifact_file=f"valid/predictions_epoch_{self.current_epoch}.png"
+                )
+                plt.close(fig)
+
+            # Clear samples for next epoch
+            self.valid_vis_samples.clear()
+
         self.validation_step_outputs.clear()
         return
 
