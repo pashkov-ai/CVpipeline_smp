@@ -12,13 +12,18 @@ defaults:
 
 general:
   learning_rate: 3e-4
-  batch_size: 10
+  batch_size: 20
   crops_per_image: 10
   scheduler_interval: epoch
   scheduler_monitor: valid_loss
   metric_mode: min
   scheduler_frequency: 1
   random_seed: 8888
+
+  split_proportions:
+    - 85
+    - 15
+    - 0
 
 hydra:
   run:

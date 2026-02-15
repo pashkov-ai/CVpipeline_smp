@@ -338,10 +338,11 @@ class AITEXFabricDataModule(pl.LightningDataModule):
 
         n_labels = len(labeled_dataset.keys())
 
+        proportions = tuple((x for x in self.cfg.general.split_proportions))
         # todo: splits are imbalanced for binary multi error code setup
         dataset_splits = [[], [], []]
         for label, label_list in labeled_dataset.items():
-            splits = split_by_proportions(label_list, (75, 15, 10))
+            splits = split_by_proportions(label_list, proportions)
             dataset_splits[0].extend(splits[0])
             dataset_splits[1].extend(splits[1])
             dataset_splits[2].extend(splits[2])
