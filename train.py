@@ -57,6 +57,12 @@ def training_pipeline(cfg: DictConfig):
         local_path=config_artifact_path
     )
 
+    # log transforms
+    logger.experiment.log_artifact(
+        run_id=logger.run_id,
+        local_path="cvpipeline_smp/datamodule/transforms.py"
+    )
+
     checkpoint_callback = ModelCheckpoint(
         dirpath=run_dir / "checkpoints",
         **cfg.callbacks.model_checkpoint

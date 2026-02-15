@@ -16,11 +16,9 @@ import os
 from pathlib import Path
 from typing import Any
 
-import cv2
-import numpy as np
 
 from omegaconf import DictConfig
-
+from .transforms import get_transforms
 
 def split_by_proportions(
         data: list,
@@ -198,20 +196,19 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         # preprocessing parameteres for image
         params = get_preprocessing_params(encoder_name=cfg.model.encoder_name, pretrained=cfg.model.encoder_weights)
         # Define transforms
-        # todo move transform defentions outside
-        self.train_transform = A.Compose([
-            A.Resize(height=self.cfg.datamodule.image_size.height, width=self.cfg.datamodule.image_size.width),
-            # A.HorizontalFlip(p=0.5),
-            # A.RandomBrightnessContrast(p=0.2),
+        train_transforms = (get_transforms('train', self.cfg))
+        train_transforms.extend([
             A.Normalize(mean=params['mean'], std=params['std']),
-            ToTensorV2(),
+            ToTensorV2()
         ])
+        self.train_transform = A.Compose(train_transforms)
 
-        self.val_transform = A.Compose([
-            A.Resize(height=self.cfg.datamodule.image_size.height, width=self.cfg.datamodule.image_size.width),
+        valid_transforms = get_transforms('valid', self.cfg)
+        valid_transforms.extend([
             A.Normalize(mean=params['mean'], std=params['std']),
-            ToTensorV2(),
+            ToTensorV2()
         ])
+        self.val_transform = A.Compose(valid_transforms)
 
         self._prepare_datasets()
 
