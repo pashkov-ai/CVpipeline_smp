@@ -7,7 +7,7 @@ from omegaconf import DictConfig, OmegaConf
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from cvpipeline_smp.data.datamodule import AITEXFabricDataModule
+from cvpipeline_smp.datamodule.datamodule import AITEXFabricDataModule
 from cvpipeline_smp.lightning_module import SMPLightningModule
 
 import os

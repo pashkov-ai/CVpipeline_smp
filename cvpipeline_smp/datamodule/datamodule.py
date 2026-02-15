@@ -319,27 +319,22 @@ class AITEXFabricDataModule(pl.LightningDataModule):
 
 
         # todo infer / verify  mode (binary, multiclass, multilabel) here
-        # convert raw dataset format to labeled dataset format
-        dataset = self._load_dataset()
-        labeled_dataset = {}
+
         # todo triyng to reduce amount of background
         # labeled_dataset = {0: []}
         # for (_, image_path, mask_path) in dataset['non_defect']:
         #     labeled_dataset[0].append((0, image_path, mask_path))
 
-        if self.labels_mapping is None: # todo a hack for code belowto work
-            labeled_dataset[1] = []
+        dataset = self._load_dataset()
+        labeled_dataset = {}
+        for code, label in self.cfg.labels.mapping.items():
+            labeled_dataset[label] = []
 
         for defect_code in sorted(dataset['defect'].keys()):
-            if self.labels_mapping is None: # everything is one class 'defect'
+            if defect_code in self.cfg.labels.mapping:
+                label = self.cfg.labels.mapping[defect_code]
                 for (_, image_path, mask_path) in dataset['defect'][defect_code]:
-                    labeled_dataset[1].append((1, image_path, mask_path))
-            else:
-                if defect_code in self.labels_mapping:
-                    label = self.labels_mapping[defect_code]
-                    labeled_dataset[label] = []
-                    for (_, image_path, mask_path) in dataset['defect'][defect_code]:
-                        labeled_dataset[label].append((label, image_path, mask_path))
+                    labeled_dataset[label].append((label, image_path, mask_path))
 
         n_labels = len(labeled_dataset.keys())
 
