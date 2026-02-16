@@ -253,6 +253,67 @@ def test_prediction_against_mask(
     }
 
 
+def save_mask_as_rgb(
+    mask: np.ndarray,
+    output_path: str | Path,
+) -> None:
+    """Save a predicted mask as an RGB image with color-coded classes.
+
+    Converts a multiclass segmentation mask to an RGB image where each class
+    is represented by a specific color:
+    - Background (class 0): Black (0, 0, 0)
+    - Class 1: Red (255, 0, 0)
+    - Class 2: Green (0, 255, 0)
+    - Class 3: Blue (0, 0, 255)
+
+    Args:
+        mask: Numpy array of shape (H, W) containing class indices (0-3).
+        output_path: Path where the RGB image will be saved.
+
+    Raises:
+        ValueError: If mask contains invalid class indices or has wrong shape.
+        IOError: If the file cannot be written.
+
+    Example:
+        >>> mask = np.array([[0, 1, 2], [3, 0, 1]])
+        >>> save_mask_as_rgb(mask, "output_mask.png")
+        # Saves RGB image: black, red, green in first row; blue, black, red in second row
+    """
+    # Validate mask
+    if mask.ndim != 2:
+        raise ValueError(f"Mask must be 2D, got shape {mask.shape}")
+
+    unique_classes = np.unique(mask)
+    if np.any(unique_classes < 0) or np.any(unique_classes > 3):
+        raise ValueError(
+            f"Mask contains invalid class indices. "
+            f"Expected 0-3, got {unique_classes}"
+        )
+
+    # Create RGB image
+    height, width = mask.shape
+    rgb_image = np.zeros((height, width, 3), dtype=np.uint8)
+
+    # Map class indices to colors
+    # Class 0 (background): Black (0, 0, 0) - already zeros
+    # Class 1: Red (255, 0, 0)
+    rgb_image[mask == 1, 0] = 255  # R channel
+
+    # Class 2: Green (0, 255, 0)
+    rgb_image[mask == 2, 1] = 255  # G channel
+
+    # Class 3: Blue (0, 0, 255)
+    rgb_image[mask == 3, 2] = 255  # B channel
+
+    # Convert RGB to BGR for OpenCV
+    bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+
+    # Save image
+    success = cv2.imwrite(str(output_path), bgr_image)
+    if not success:
+        raise IOError(f"Failed to save image to {output_path}")
+
+
 if __name__ == "__main__":
     """Example usage of the test functions."""
     # Load the ONNX model
@@ -261,12 +322,12 @@ if __name__ == "__main__":
 
     dataset = load_dataset()
 
-    idx = -1
-    (_, img_path, mask_path)  = dataset['defect']['006'][idx]
+    (img_name, img_path, mask_path)  = dataset['defect']['006'][-1]
     pmask = predict_full_image_batched(
         img_path,
         session
     )
+    save_mask_as_rgb(pmask, f"{img_name}_pred_mask.png")
 
 
 
