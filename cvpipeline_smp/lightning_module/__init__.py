@@ -1,2 +1,4 @@
 from cvpipeline_smp.lightning_module.smp_train_pipeline import SMPLightningModule
-__all__ = ["SMPLightningModule"]
+from cvpipeline_smp.lightning_module.smp_train_pipeline_multiclass import SMPLightningModuleMultiClass
+
+__all__ = ["SMPLightningModule", "SMPLightningModuleMultiClass"]

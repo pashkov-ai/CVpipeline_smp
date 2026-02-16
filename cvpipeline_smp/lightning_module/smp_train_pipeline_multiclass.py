@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.figure
 
 
-class SMPLightningModule(pl.LightningModule):
+class SMPLightningModuleMultiClass(pl.LightningModule):
     """PyTorch Lightning module for binary segmentation.
 
     Uses UNet++ architecture with EfficientNet-B0 encoder from
@@ -42,8 +42,8 @@ class SMPLightningModule(pl.LightningModule):
         )
 
         # for image segmentation dice loss could be the best first choice
-        if cfg.labels.mode == 'binary':
-            self.loss_fn = hydra_instantiate(cfg.loss, mode=smp.losses.BINARY_MODE)
+        if cfg.labels.mode == 'multiclass':
+            self.loss_fn = hydra_instantiate(cfg.loss, mode=smp.losses.MULTICLASS_MODE)
 
         # initialize step metics
         self.training_step_outputs = []
@@ -82,34 +82,25 @@ class SMPLightningModule(pl.LightningModule):
         h, w = image.shape[2:]
         assert h % 32 == 0 and w % 32 == 0
 
-        assert mask.ndim == 4
-
-        # Check that mask values in between 0 and 1, NOT 0 and 255 for binary segmentation
-        assert mask.max() <= 1.0 and mask.min() >= 0
+        assert mask.ndim == 3
 
         logits_mask = self.forward(image)
         logits_mask = logits_mask.contiguous()
 
-        # Predicted mask contains logits, and loss_fn param `from_logits` is set to True
+        # Compute loss using multi-class Dice loss (pass original mask, not one-hot encoded)
         loss = self.loss_fn(logits_mask, mask)
 
-        # Lets compute metrics for some threshold
-        # first convert mask values to probabilities, then
-        # apply thresholding
-        prob_mask = logits_mask.sigmoid()
-        pred_mask = (prob_mask > 0.5).float()
-
-        # We will compute IoU metric by two ways
-        #   1. dataset-wise
-        #   2. image-wise
-        # but for now we just compute true positive, false positive, false negative and
-        # true negative 'pixels' for each image and class
-        # these values will be aggregated in the end of an epoch
+        # Apply softmax to get probabilities for multi-class segmentation
+        prob_mask = logits_mask.softmax(dim=1)
+        # Convert probabilities to predicted class labels
+        pred_mask = prob_mask.argmax(dim=1)
 
         # print(image.shape, mask.shape, logits_mask.shape, prob_mask.shape, pred_mask.shape)
+        torch.use_deterministic_algorithms(False) # todo a hack for  _histc_cuda does not have a deterministic implementation
         tp, fp, fn, tn = smp.metrics.get_stats(
-            pred_mask.long(), mask.long(), mode="binary"
+            pred_mask.long(), mask.long(), mode="multiclass", num_classes=self.cfg.labels.classes
         )
+        torch.use_deterministic_algorithms(True)
         if stage == "train":
             ret = {
                 f"loss": loss,
@@ -249,26 +240,26 @@ class SMPLightningModule(pl.LightningModule):
         self.shared_epoch_end(self.training_step_outputs, "train")
 
         # Log visualizations if samples were collected
-        if len(self.train_vis_samples) > 0 and self.logger is not None:
-            sample = self.train_vis_samples[0]
-            fig = self.visualize_predictions(
-                images=sample['images'],
-                masks_true=sample['masks_true'],
-                masks_pred=sample['masks_pred'],
-                max_samples=self.max_vis_samples,
-            )
-
-            # Log figure to MLFlow
-            if fig is not None:
-                self.logger.experiment.log_figure(
-                    run_id=self.logger.run_id,
-                    figure=fig,
-                    artifact_file=f"train/predictions_epoch_{self.current_epoch}.png"
-                )
-                plt.close(fig)
-
-            # Clear samples for next epoch
-            self.train_vis_samples.clear()
+        # if len(self.train_vis_samples) > 0 and self.logger is not None:
+        #     sample = self.train_vis_samples[0]
+        #     fig = self.visualize_predictions(
+        #         images=sample['images'],
+        #         masks_true=sample['masks_true'],
+        #         masks_pred=sample['masks_pred'],
+        #         max_samples=self.max_vis_samples,
+        #     )
+        #
+        #     # Log figure to MLFlow
+        #     if fig is not None:
+        #         self.logger.experiment.log_figure(
+        #             run_id=self.logger.run_id,
+        #             figure=fig,
+        #             artifact_file=f"train/predictions_epoch_{self.current_epoch}.png"
+        #         )
+        #         plt.close(fig)
+        #
+        #     # Clear samples for next epoch
+        #     self.train_vis_samples.clear()
 
         # empty set output list
         self.training_step_outputs.clear()
@@ -298,26 +289,26 @@ class SMPLightningModule(pl.LightningModule):
         self.shared_epoch_end(self.validation_step_outputs, "valid")
 
         # Log visualizations if samples were collected
-        if len(self.valid_vis_samples) > 0 and self.logger is not None:
-            sample = self.valid_vis_samples[0]
-            fig = self.visualize_predictions(
-                images=sample['images'],
-                masks_true=sample['masks_true'],
-                masks_pred=sample['masks_pred'],
-                max_samples=self.max_vis_samples,
-            )
-
-            # Log figure to MLFlow
-            if fig is not None:
-                self.logger.experiment.log_figure(
-                    run_id=self.logger.run_id,
-                    figure=fig,
-                    artifact_file=f"valid/predictions_epoch_{self.current_epoch}.png"
-                )
-                plt.close(fig)
-
-            # Clear samples for next epoch
-            self.valid_vis_samples.clear()
+        # if len(self.valid_vis_samples) > 0 and self.logger is not None:
+        #     sample = self.valid_vis_samples[0]
+        #     fig = self.visualize_predictions(
+        #         images=sample['images'],
+        #         masks_true=sample['masks_true'],
+        #         masks_pred=sample['masks_pred'],
+        #         max_samples=self.max_vis_samples,
+        #     )
+        #
+        #     # Log figure to MLFlow
+        #     if fig is not None:
+        #         self.logger.experiment.log_figure(
+        #             run_id=self.logger.run_id,
+        #             figure=fig,
+        #             artifact_file=f"valid/predictions_epoch_{self.current_epoch}.png"
+        #         )
+        #         plt.close(fig)
+        #
+        #     # Clear samples for next epoch
+        #     self.valid_vis_samples.clear()
 
         self.validation_step_outputs.clear()
         return

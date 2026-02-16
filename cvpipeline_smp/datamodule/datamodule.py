@@ -146,7 +146,12 @@ class AITEXFabricDataset(Dataset):
             raw_mask = np.zeros(image.shape[:2], dtype=np.uint8)
 
         mask = np.zeros_like(raw_mask)
-        mask[raw_mask > self.cfg.general.raw_mask_px_th] = label
+        # todo maybe unnecessary for binary
+        if self.cfg.labels.mode == 'binary':
+            mask[raw_mask > self.cfg.general.raw_mask_px_th] = label
+            # mask = raw_mask / 255.0
+        if self.cfg.labels.mode == 'multiclass':
+            mask[raw_mask > self.cfg.general.raw_mask_px_th] = label
         # print('getitem: ', image.shape, mask.shape)
         # Apply transforms
         # print('Before: ', image.shape, mask.shape)
@@ -155,7 +160,8 @@ class AITEXFabricDataset(Dataset):
             image = transformed["image"]
             mask = transformed["mask"]
 
-        mask = mask.unsqueeze(0) # for binary
+        if self.cfg.labels.mode == 'binary':
+            mask = mask.unsqueeze(0)
         # print('After: ', image.shape, mask.shape)
         return {"label": label, "image": image, "mask": mask}
 
@@ -359,19 +365,19 @@ class AITEXFabricDataModule(pl.LightningDataModule):
         self.train_dataset = AITEXFabricDataset(
             images=dataset_splits[0],
             n_labels=n_labels,
-            crops_per_image=self.cfg.general.crops_per_image,
+            cfg=self.cfg,
             transform=self.train_transform,
         )
         self.val_dataset = AITEXFabricDataset(
             images=dataset_splits[1],
             n_labels=n_labels,
-            crops_per_image=self.cfg.general.crops_per_image,
+            cfg=self.cfg,
             transform=self.val_transform,
         )
         self.test_dataset = AITEXFabricDataset(
             images=dataset_splits[2],
             n_labels=n_labels,
-            crops_per_image=self.cfg.general.crops_per_image,
+            cfg=self.cfg,
             transform=self.val_transform,
         )
 

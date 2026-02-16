@@ -1,0 +1,9 @@
+name: ${labels.mode}_broken
+
+mode: multiclass
+classes: 4
+
+mapping:
+  '002': 1
+  '006': 2
+  '010': 3

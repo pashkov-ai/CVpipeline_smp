@@ -1,12 +1,12 @@
 defaults:
   - _self_
-  - labels: binary_broken
+  - labels: multiclass_broken
   - datamodule: datamodule
   - model: smp
   - loss: tversky
   - optimizer: adamw
   - scheduler: cosine_annealing
-  - trainer: default
+  - trainer: test
   - callbacks: callbacks
   - logger: mlflow_local
 
