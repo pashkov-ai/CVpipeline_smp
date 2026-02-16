@@ -126,22 +126,23 @@ class SMPLightningModuleMultiClass(pl.LightningModule):
         masks_pred: torch.Tensor,
         max_samples: int = 4,
     ):
-        """Create visualization of predictions.
+        """Create visualization of predictions for multiclass segmentation.
 
         Args:
             images: Batch of input images of shape (B, C, H, W).
-            masks_true: Batch of ground truth masks of shape (B, 1, H, W).
-            masks_pred: Batch of predicted masks (probabilities) of shape (B, 1, H, W).
+            masks_true: Batch of ground truth masks of shape (B, H, W) with class indices.
+            masks_pred: Batch of predicted masks of shape (B, H, W) with class indices.
             max_samples: Maximum number of samples to visualize.
 
         Returns:
-            Matplotlib figure containing the visualizations or None if matplotlib not available.
+            Matplotlib figure containing the visualizations.
 
         Example:
             >>> fig = self.visualize_predictions(images, masks_true, masks_pred, 4)
             >>> self.logger.experiment.log_figure(fig, 'valid/predictions.png')
         """
         num_samples = min(max_samples, images.shape[0])
+        num_classes = self.cfg.labels.classes
 
         # Move tensors to CPU and convert to numpy
         images = images[:num_samples].detach().cpu()
@@ -149,11 +150,14 @@ class SMPLightningModuleMultiClass(pl.LightningModule):
         masks_pred = masks_pred[:num_samples].detach().cpu()
 
         # Create figure with subplots: each row shows [image, ground truth, prediction]
-        fig, axes = plt.subplots(num_samples, 3, figsize=(12, 4 * num_samples))
+        fig, axes = plt.subplots(num_samples, 3, figsize=(15, 5 * num_samples))
 
         # Handle single sample case
         if num_samples == 1:
             axes = axes.reshape(1, -1)
+
+        # Use a categorical colormap for better class distinction
+        cmap = plt.cm.get_cmap('tab10', num_classes)
 
         for idx in range(num_samples):
             # Get image (C, H, W) and denormalize if needed
@@ -167,24 +171,32 @@ class SMPLightningModuleMultiClass(pl.LightningModule):
             else:
                 img_np = img.squeeze().numpy()
 
-            # Get masks (1, H, W) -> (H, W)
-            mask_true_np = masks_true[idx].squeeze().numpy()
-            mask_pred_np = masks_pred[idx].squeeze().numpy()
+            # Get masks (H, W) - class indices
+            mask_true_np = masks_true[idx].numpy()
+            mask_pred_np = masks_pred[idx].numpy()
 
             # Plot original image
             axes[idx, 0].imshow(img_np)
-            axes[idx, 0].set_title(f"Input Image {idx + 1}")
+            axes[idx, 0].set_title(f"Input Image {idx + 1}", fontsize=12)
             axes[idx, 0].axis("off")
 
-            # Plot ground truth mask
-            axes[idx, 1].imshow(mask_true_np, cmap="gray", vmin=0, vmax=1)
-            axes[idx, 1].set_title("Ground Truth")
+            # Plot ground truth mask with categorical colormap
+            im1 = axes[idx, 1].imshow(mask_true_np, cmap=cmap, vmin=0, vmax=num_classes - 1, interpolation='nearest')
+            axes[idx, 1].set_title("Ground Truth", fontsize=12)
             axes[idx, 1].axis("off")
 
-            # Plot predicted mask
-            axes[idx, 2].imshow(mask_pred_np, cmap="gray", vmin=0, vmax=1)
-            axes[idx, 2].set_title("Prediction")
+            # Plot predicted mask with categorical colormap
+            im2 = axes[idx, 2].imshow(mask_pred_np, cmap=cmap, vmin=0, vmax=num_classes - 1, interpolation='nearest')
+            axes[idx, 2].set_title("Prediction", fontsize=12)
             axes[idx, 2].axis("off")
+
+            # Add colorbar for the last row
+            if idx == num_samples - 1:
+                # Create colorbar with discrete class labels
+                cbar = plt.colorbar(im2, ax=axes[idx, 2], fraction=0.046, pad=0.04)
+                cbar.set_label('Class', rotation=270, labelpad=15)
+                cbar.set_ticks(range(num_classes))
+                cbar.set_ticklabels([f'Class {i}' for i in range(num_classes)])
 
         plt.tight_layout()
         return fig
@@ -226,12 +238,14 @@ class SMPLightningModuleMultiClass(pl.LightningModule):
             image = batch['image']
             mask = batch['mask']
             logits_mask = self.forward(image)
-            prob_mask = logits_mask.sigmoid()
+            # For multiclass: softmax to get probabilities, then argmax to get class indices
+            prob_mask = logits_mask.softmax(dim=1)
+            pred_mask = prob_mask.argmax(dim=1)
 
             self.train_vis_samples.append({
                 'images': image.detach(),
                 'masks_true': mask.detach(),
-                'masks_pred': prob_mask.detach(),
+                'masks_pred': pred_mask.detach(),
             })
 
         return train_loss_info
@@ -240,26 +254,29 @@ class SMPLightningModuleMultiClass(pl.LightningModule):
         self.shared_epoch_end(self.training_step_outputs, "train")
 
         # Log visualizations if samples were collected
-        # if len(self.train_vis_samples) > 0 and self.logger is not None:
-        #     sample = self.train_vis_samples[0]
-        #     fig = self.visualize_predictions(
-        #         images=sample['images'],
-        #         masks_true=sample['masks_true'],
-        #         masks_pred=sample['masks_pred'],
-        #         max_samples=self.max_vis_samples,
-        #     )
-        #
-        #     # Log figure to MLFlow
-        #     if fig is not None:
-        #         self.logger.experiment.log_figure(
-        #             run_id=self.logger.run_id,
-        #             figure=fig,
-        #             artifact_file=f"train/predictions_epoch_{self.current_epoch}.png"
-        #         )
-        #         plt.close(fig)
-        #
-        #     # Clear samples for next epoch
-        #     self.train_vis_samples.clear()
+        if len(self.train_vis_samples) > 0 and self.logger is not None:
+            try:
+                sample = self.train_vis_samples[0]
+                fig = self.visualize_predictions(
+                    images=sample['images'],
+                    masks_true=sample['masks_true'],
+                    masks_pred=sample['masks_pred'],
+                    max_samples=self.max_vis_samples,
+                )
+
+                # Log figure to MLFlow
+                if fig is not None:
+                    self.logger.experiment.log_figure(
+                        run_id=self.logger.run_id,
+                        figure=fig,
+                        artifact_file=f"train/predictions_epoch_{self.current_epoch}.png"
+                    )
+                    plt.close(fig)
+            except Exception as e:
+                print(f"Warning: Failed to log train visualizations: {e}")
+            finally:
+                # Clear samples for next epoch
+                self.train_vis_samples.clear()
 
         # empty set output list
         self.training_step_outputs.clear()
@@ -275,12 +292,14 @@ class SMPLightningModuleMultiClass(pl.LightningModule):
             image = batch['image']
             mask = batch['mask']
             logits_mask = self.forward(image)
-            prob_mask = logits_mask.sigmoid()
+            # For multiclass: softmax to get probabilities, then argmax to get class indices
+            prob_mask = logits_mask.softmax(dim=1)
+            pred_mask = prob_mask.argmax(dim=1)
 
             self.valid_vis_samples.append({
                 'images': image.detach(),
                 'masks_true': mask.detach(),
-                'masks_pred': prob_mask.detach(),
+                'masks_pred': pred_mask.detach(),
             })
 
         return valid_loss_info
@@ -289,26 +308,29 @@ class SMPLightningModuleMultiClass(pl.LightningModule):
         self.shared_epoch_end(self.validation_step_outputs, "valid")
 
         # Log visualizations if samples were collected
-        # if len(self.valid_vis_samples) > 0 and self.logger is not None:
-        #     sample = self.valid_vis_samples[0]
-        #     fig = self.visualize_predictions(
-        #         images=sample['images'],
-        #         masks_true=sample['masks_true'],
-        #         masks_pred=sample['masks_pred'],
-        #         max_samples=self.max_vis_samples,
-        #     )
-        #
-        #     # Log figure to MLFlow
-        #     if fig is not None:
-        #         self.logger.experiment.log_figure(
-        #             run_id=self.logger.run_id,
-        #             figure=fig,
-        #             artifact_file=f"valid/predictions_epoch_{self.current_epoch}.png"
-        #         )
-        #         plt.close(fig)
-        #
-        #     # Clear samples for next epoch
-        #     self.valid_vis_samples.clear()
+        if len(self.valid_vis_samples) > 0 and self.logger is not None:
+            try:
+                sample = self.valid_vis_samples[0]
+                fig = self.visualize_predictions(
+                    images=sample['images'],
+                    masks_true=sample['masks_true'],
+                    masks_pred=sample['masks_pred'],
+                    max_samples=self.max_vis_samples,
+                )
+
+                # Log figure to MLFlow
+                if fig is not None:
+                    self.logger.experiment.log_figure(
+                        run_id=self.logger.run_id,
+                        figure=fig,
+                        artifact_file=f"valid/predictions_epoch_{self.current_epoch}.png"
+                    )
+                    plt.close(fig)
+            except Exception as e:
+                print(f"Warning: Failed to log validation visualizations: {e}")
+            finally:
+                # Clear samples for next epoch
+                self.valid_vis_samples.clear()
 
         self.validation_step_outputs.clear()
         return
