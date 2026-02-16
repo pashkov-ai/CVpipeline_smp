@@ -10,11 +10,12 @@ def get_transforms(mode: str, cfg: DictConfig) -> list:
         transforms.extend([
             A.OneOf(
                 [
-                    A.RandomCrop(height=256, width=256, p=0.05),
+                    A.RandomCrop(height=256, width=256, p=0.3),
                     A.CropNonEmptyMaskIfExists(height=256, width=256, p=1),
                 ],
                 p=1.0,
             ),
+
             # A.Resize(height=cfg.datamodule.image_size.height, width=cfg.datamodule.image_size.width),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
@@ -26,7 +27,9 @@ def get_transforms(mode: str, cfg: DictConfig) -> list:
     if mode == "valid":
         transforms.extend([
             # A.Resize(height=self.cfg.datamodule.image_size.height, width=self.cfg.datamodule.image_size.width),
-            A.RandomCrop(height=256, width=256, p=1.0)
+            # A.RandomCrop(height=256, width=256, p=1.0)
+            # A.RandomCrop(height=256, width=1024, p=1),
+            A.CropNonEmptyMaskIfExists(height=256, width=256, p=1),
         ])
 
     return transforms
