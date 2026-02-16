@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from cvpipeline_smp.datamodule.datamodule import AITEXFabricDataModule
-from cvpipeline_smp.lightning_module import SMPLightningModule
+from cvpipeline_smp.lightning_module import SMPLightningModule, SMPLightningModuleMultiClass
 
 import os
 import random
@@ -30,7 +30,7 @@ def set_random_seed(seed: int = 8888) -> None:
     torch.cuda.manual_seed_all(seed)
     pl.seed_everything(seed, workers=True)
     torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
+    torch.use_deterministic_algorithms(True, warn_only=True)
 
 
 def training_pipeline(cfg: DictConfig):
@@ -75,7 +75,7 @@ def training_pipeline(cfg: DictConfig):
 
     # Initialize trainer
     trainer = pl.Trainer(
-        callbacks=[checkpoint_callback, early_stopping_callback] + other_callbacks,
+        callbacks=[early_stopping_callback] + other_callbacks,
         logger=logger,
         **cfg.trainer.params
     )
@@ -87,13 +87,17 @@ def training_pipeline(cfg: DictConfig):
     datamodule = AITEXFabricDataModule(cfg=cfg)
 
     # Initialize model
-    lightning_model = SMPLightningModule(cfg=cfg)
+    lightning_model = None
+    if cfg.labels.mode == "binary":
+        lightning_model = SMPLightningModule(cfg=cfg)
+    if cfg.labels.mode == 'multiclass':
+        lightning_model = SMPLightningModuleMultiClass(cfg=cfg)
 
     # Train the model
     trainer.fit(lightning_model, datamodule=datamodule)
 
     # Test the model
-    trainer.test(lightning_model, datamodule=datamodule)
+    # trainer.test(lightning_model, datamodule=datamodule)
 
 
 @hydra.main(config_path='configs', config_name='config', version_base='1.3')
