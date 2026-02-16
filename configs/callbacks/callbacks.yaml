@@ -9,7 +9,7 @@ model_checkpoint:
   filename: '{epoch}-{${general.scheduler_monitor}:.6f}'
   monitor: ${general.scheduler_monitor}
   mode: ${general.metric_mode}
-  save_top_k: 3
+  save_top_k: 1
   save_last: True
 
 other_callbacks:

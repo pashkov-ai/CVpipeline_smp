@@ -6,7 +6,7 @@ defaults:
   - loss: tversky
   - optimizer: adamw
   - scheduler: cosine_annealing
-  - trainer: test
+  - trainer: default
   - callbacks: callbacks
   - logger: mlflow_local
 
@@ -22,9 +22,9 @@ general:
   random_seed: 8888
 
   split_proportions:
-    - 85
-    - 15
-    - 0
+    - 80
+    - 10
+    - 10
 
 hydra:
   run:

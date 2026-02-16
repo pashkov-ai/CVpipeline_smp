@@ -75,7 +75,7 @@ def training_pipeline(cfg: DictConfig):
 
     # Initialize trainer
     trainer = pl.Trainer(
-        callbacks=[early_stopping_callback] + other_callbacks,
+        callbacks=[early_stopping_callback, checkpoint_callback] + other_callbacks,
         logger=logger,
         **cfg.trainer.params
     )
