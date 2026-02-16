@@ -105,18 +105,18 @@ class AITEXFabricDataset(Dataset):
         self,
         images: list[tuple[int, Path, Path | None]], # (label, image_path, mask_path)
         n_labels: int,
-        crops_per_image: int,
+        cfg: DictConfig,
         transform: A.Compose | None = None,
     ) -> None:
         """Initialize the AITEX fabric dataset."""
         self.images = images
         self.n_labels = n_labels
-        self.crops_per_image = crops_per_image
+        self.cfg = cfg
         self.transform = transform
 
     def __len__(self) -> int:
         """Return the number of samples in the dataset."""
-        return len(self.images) * self.crops_per_image
+        return len(self.images) * self.cfg.general.crops_per_image
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get a single sample from the dataset.
@@ -146,7 +146,7 @@ class AITEXFabricDataset(Dataset):
             raw_mask = np.zeros(image.shape[:2], dtype=np.uint8)
 
         mask = np.zeros_like(raw_mask)
-        mask[raw_mask != 0] = label
+        mask[raw_mask > self.cfg.general.raw_mask_px_th] = label
         # print('getitem: ', image.shape, mask.shape)
         # Apply transforms
         # print('Before: ', image.shape, mask.shape)
