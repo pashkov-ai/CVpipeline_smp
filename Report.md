@@ -6,6 +6,7 @@
 - **Task type**: Semantic segmentation (defects are elongated and better suited for segmentation than detection/instance segmentation)
 - **Selected classes**: Broken defects (end, yarn, pick) due to similar distribution
 - **Spatial constraints**: Classes exhibit directional features (vertical/horizontal), limiting use of rotation augmentations
+- **Baseline model**: binary segmentation on all 3 classes
 
 ## Current Model Performance
 
