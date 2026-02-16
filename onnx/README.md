@@ -1,7 +1,7 @@
 # ONNX Model Inference
 
 ## Setup
-
+0. Download the ONNX model from the [here](https://drive.google.com/file/d/1e_ba2fC5sDoV03nS5HHaA7JBGotJR59w/view?usp=drive_link)
 1. Place `model.onnx` in this directory
 2. Install dependencies: `pip install -r requirements.txt`
 3. See `venv_notes` for additional environment setup reference
