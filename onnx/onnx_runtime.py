@@ -8,6 +8,7 @@ def load_model(model_path: str) -> ort.InferenceSession:
 
 def load_image(image_path: str) -> np.ndarray:
     """Load image using OpenCV and return as numpy array."""
+    # todo: add image preprocessing
     img = cv2.imread(image_path, cv2.IMREAD_COLOR)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return img

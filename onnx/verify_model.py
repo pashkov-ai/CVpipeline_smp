@@ -12,7 +12,7 @@ def verify_runtime_shape(model_path: str) -> None:
     print(input_name,sess.get_inputs()[0].shape)
 
     # Create dummy input (match model input shape!)
-    x = np.random.randn(1, 3, 256, 4096).astype(np.float32)
+    x = np.random.randn(1, 3, 256, 256).astype(np.float32)
 
     # Run inference
     outputs = sess.run(None, {input_name: x})
