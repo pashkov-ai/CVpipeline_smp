@@ -1,0 +1,37 @@
+[2026-02-15 18:19:42,445][root][INFO] - Number of labels: 3
+[2026-02-15 18:19:42,445][root][INFO] - Number of samples for label 1: 9
+[2026-02-15 18:19:42,445][root][INFO] - Number of samples for label 2: 8
+[2026-02-15 18:19:42,445][root][INFO] - Number of samples for label 3: 10
+[2026-02-15 18:19:42,445][root][INFO] - Number of train samples: 21
+[2026-02-15 18:19:42,445][root][INFO] - Number of validation samples: 3
+[2026-02-15 18:19:42,445][root][INFO] - Number of test samples: 3
+[2026-02-15 18:19:42,445][root][INFO] - Images in split 0:
+0001_002_00.png
+0002_002_00.png
+0003_002_00.png
+0004_002_01.png
+0005_002_01.png
+0006_002_01.png
+0017_002_02.png
+0010_006_02.png
+0011_006_02.png
+0012_006_02.png
+0013_006_02.png
+0014_006_02.png
+0015_006_02.png
+0018_010_03.png
+0072_010_03.png
+0073_010_03.png
+0074_010_03.png
+0075_010_03.png
+0095_010_03.png
+0102_010_03.png
+0103_010_03.png
+[2026-02-15 18:19:42,445][root][INFO] - Images in split 1:
+0089_002_01.png
+0016_006_02.png
+0105_010_03.png
+[2026-02-15 18:19:42,445][root][INFO] - Images in split 2:
+0090_002_01.png
+0081_006_04.png
+0106_010_03.png
