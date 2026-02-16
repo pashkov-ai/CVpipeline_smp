@@ -1,0 +1,82 @@
+Sun Feb 15 21:09:17 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090        Off |   00000000:2D:00.0  On |                  Off |
+|  0%   47C    P0             90W /  450W |    2663MiB /  24564MiB |      3%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+============================================================
+BENCHMARK CONFIGURATION
+============================================================
+Device requested: GPU
+Execution providers: ['CUDAExecutionProvider', 'CPUExecutionProvider']
+Number of images: 100
+Model path: model.onnx
+============================================================
+
+Running benchmark with 100 images on GPU...
+  Completed 10/100 iterations...
+  Completed 20/100 iterations...
+  Completed 30/100 iterations...
+  Completed 40/100 iterations...
+  Completed 50/100 iterations...
+  Completed 60/100 iterations...
+  Completed 70/100 iterations...
+  Completed 80/100 iterations...
+  Completed 90/100 iterations...
+  Completed 100/100 iterations...
+
+============================================================
+BENCHMARK RESULTS
+============================================================
+Device: GPU
+Providers: ['CUDAExecutionProvider', 'CPUExecutionProvider']
+Total time: 10.6021s
+Mean time: 0.1060s
+Min time: 0.0977s
+Max time: 0.4175s
+Std dev: 0.0316s
+FPS: 9.43
+============================================================
+Processor: x86_64
+Physical cores: 8
+Logical cores: 16
+Max frequency (MHz): 3600.0
+============================================================
+BENCHMARK CONFIGURATION
+============================================================
+Device requested: CPU
+Execution providers: ['CPUExecutionProvider']
+Number of images: 100
+Model path: model.onnx
+============================================================
+
+Running benchmark with 100 images on CPU...
+  Completed 10/100 iterations...
+  Completed 20/100 iterations...
+  Completed 30/100 iterations...
+  Completed 40/100 iterations...
+  Completed 50/100 iterations...
+  Completed 60/100 iterations...
+  Completed 70/100 iterations...
+  Completed 80/100 iterations...
+  Completed 90/100 iterations...
+  Completed 100/100 iterations...
+
+============================================================
+BENCHMARK RESULTS
+============================================================
+Device: CPU
+Providers: ['CPUExecutionProvider']
+Total time: 337.0250s
+Mean time: 3.3703s
+Min time: 3.0090s
+Max time: 4.2133s
+Std dev: 0.3421s
+FPS: 0.30
+============================================================
