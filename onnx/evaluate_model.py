@@ -321,8 +321,10 @@ if __name__ == "__main__":
     session = ort.InferenceSession(model_path)
 
     dataset = load_dataset()
-
-    (img_name, img_path, mask_path)  = dataset['defect']['006'][-1]
+    # '002': 1
+    # '006': 2
+    # '010': 3
+    (img_name, img_path, mask_path)  = dataset['defect']['002'][-1]
     pmask = predict_full_image_batched(
         img_path,
         session
