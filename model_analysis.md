@@ -3,13 +3,15 @@
 ## Important note:
 I discovered that one of the masks in the test set is broken  
 (doesn't contain a mask with defects, but the model could successfully recognize a defect)  
-So I had to do a manual analysis
+So I had to do a manual analysis  
+  
+Data splits are shown in `data_splits.txt`
 
 
-## Error codes encoding:
-* 002 - Broken end - Blue
-* 006 - Broken yarn - Red
-* 010 - Broken pick - Green
+## Error codes encoding (as in yaml config and onnx model):
+* 002 - Broken end  - Red
+* 006 - Broken yarn - Green
+* 010 - Broken pick - Blue
 
 
 ## Validation Set
@@ -110,4 +112,6 @@ Result: successfully predicted the correct defect type
 ### Test Accuracy: 66% (2 defects out of 3 were correctly recognized)
 
 ### P.S.
-Got lucky that the last sample didn't go to the training set :)
+Got lucky that the last sample didn't go to the training set :)  
+It also means - there was no data leakage to the train set cuz it'd be obvious  
+This broken mask is technically an example of the data poisoning attack.
